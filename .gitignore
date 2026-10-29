@@ -2,3 +2,6 @@
 .DS_Store
 Thumbs.db
 *.swp
+
+# Local video prompts
+/assets/videos/**/prompt.txt

@@ -48,6 +48,106 @@
     return c;
   }
 
+  /* ------------------------------------------------------- audio montage */
+  (function audioMontage() {
+    const root = document.querySelector(".audio-montage");
+    if (!root) return;
+    const tiles = [...root.querySelectorAll(".audio-tile")];
+    const status = root.querySelector(".audio-status");
+    const visible = new Set();
+    let active = null;
+    const paused = REDUCED;
+    let request = 0;
+
+    function load(video) {
+      if (!video.getAttribute("src")) video.src = video.dataset.src;
+    }
+    function silence() {
+      request++;
+      tiles.forEach(tile => {
+        const video = tile.querySelector("video");
+        video.muted = true;
+        if (paused) video.pause();
+        tile.dataset.sounding = "false";
+      });
+      active = null;
+    }
+    function preview(tile) {
+      const video = tile.querySelector("video");
+      if (paused || document.hidden || !visible.has(tile)) return;
+      load(video);
+      video.play().catch(() => {});
+    }
+    async function listen(tile) {
+      if (document.body.classList.contains("modal-open")) return;
+      silence();
+      const ticket = request;
+      active = tile;
+      const video = tile.querySelector("video");
+      load(video);
+      video.muted = false;
+      try {
+        await video.play();
+        if (ticket !== request) return;
+        tile.dataset.sounding = "true";
+        status.textContent = "";
+      } catch (error) {
+        if (ticket !== request) return;
+        silence();
+        status.textContent = error.name === "NotAllowedError"
+          ? "Click a video to enable sound, then hover to listen."
+          : "This video could not play. Try clicking it again.";
+        preview(tile);
+      }
+    }
+    tiles.forEach(tile => {
+      tile.addEventListener("pointerenter", event => {
+        if (event.pointerType === "mouse") listen(tile);
+      });
+      tile.addEventListener("pointerleave", event => {
+        if (event.pointerType === "mouse" && active === tile) silence();
+      });
+      tile.addEventListener("click", () => {
+        silence();
+        const source = tile.querySelector("video");
+        const video = document.createElement("video");
+        video.src = source.dataset.src;
+        video.poster = source.poster;
+        video.controls = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.className = "audio-enlarged";
+        video.setAttribute("aria-label", "Enlarged video with sound");
+        tile.focus({ preventScroll: true });
+        lightbox.open(video);
+        video.play().catch(() => { /* Native controls allow retrying playback. */ });
+      });
+      tile.addEventListener("blur", () => { if (active === tile) silence(); });
+
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const tile = entry.target;
+        if (entry.isIntersecting) {
+          visible.add(tile);
+          preview(tile);
+        } else {
+          visible.delete(tile);
+          if (active === tile) silence();
+          tile.querySelector("video").pause();
+        }
+      });
+    }, { threshold: 0.15 });
+    tiles.forEach(tile => observer.observe(tile));
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        silence();
+        tiles.forEach(tile => tile.querySelector("video").pause());
+      } else visible.forEach(preview);
+    });
+    window.addEventListener("blur", silence);
+  })();
+
   /* ------------------------------------------------------------ topbar */
   (function topbar() {
     const bar = document.querySelector(".topbar");
@@ -142,6 +242,11 @@
     const closeBtn = root.querySelector(".close");
     let lastFocus = null;
     function close() {
+      body.querySelectorAll("video").forEach(video => {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      });
       root.hidden = true;
       body.replaceChildren();
       document.body.classList.remove("modal-open");
@@ -163,7 +268,16 @@
       closeBtn.focus();
     }
     closeBtn.addEventListener("click", close);
-    root.addEventListener("click", e => { if (e.target === root) close(); });
+    root.addEventListener("click", e => {
+      if (!e.target.closest("video, img, figcaption, .close")) close();
+    });
+    root.addEventListener("keydown", e => {
+      if (e.key !== "Tab") return;
+      const controls = [...root.querySelectorAll("button, video[controls], a[href], [tabindex='0']")];
+      const first = controls[0], last = controls[controls.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !root.hidden) close(); });
     return { open, close };
   })();
