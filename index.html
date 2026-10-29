@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sDMD: Sinkhorn Distribution Matching Distillation</title>
+  <meta name="description" content="sDMD distills diffusion models into few-step generators by adding gated Sinkhorn transport to distribution matching distillation. Results on FLUX.1-dev, Qwen-Image-20B and Wan2.1-14B.">
+  <meta name="theme-color" content="#0b0c0f">
+  <link rel="canonical" href="https://sinkhorn-dmd.github.io/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="sDMD: Sinkhorn Distribution Matching Distillation">
+  <meta property="og:description" content="Few-step diffusion distillation with gated Sinkhorn transport.">
+  <meta property="og:url" content="https://sinkhorn-dmd.github.io/">
+  <meta property="og:image" content="https://sinkhorn-dmd.github.io/assets/img/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="sDMD: Sinkhorn Distribution Matching Distillation">
+  <meta name="twitter:image" content="https://sinkhorn-dmd.github.io/assets/img/og.jpg">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/contrib/auto-render.min.js"></script>
+
+  <link rel="stylesheet" href="assets/css/site.css">
+  <script src="assets/js/data.js"></script>
+  <script defer src="assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="container wide">
+    <a class="wordmark" href="#top" aria-label="sDMD, back to top"><span class="dot" aria-hidden="true"></span>sDMD</a>
+    <nav class="topnav" aria-label="Sections">
+      <a href="#method">Method</a>
+      <a href="#images">Images</a>
+      <a href="#videos">Videos</a>
+      <a href="#diversity">Diversity</a>
+      <a href="#bibtex">BibTeX</a>
+    </nav>
+    <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ================================================================ hero -->
+  <section class="hero" id="top">
+    <canvas class="hero-flow" aria-hidden="true"></canvas>
+    <h1>
+      <span class="mark">sDMD</span>
+      <span class="title">Sinkhorn Distribution Matching Distillation</span>
+    </h1>
+    <ul class="authors">
+      <li><a href="https://jh27kim.github.io/" target="_blank" rel="noopener">Jaihoon Kim</a><sup>1,2,†</sup></li>
+      <li>Lingxiao Li<sup>2</sup></li>
+      <li>Soshi Shimada<sup>2</sup></li>
+      <li>Roshni Cooper<sup>2</sup></li>
+      <li><a href="https://mhsung.github.io/" target="_blank" rel="noopener">Minhyuk Sung</a><sup>1,‡</sup></li>
+      <li>Yiwei Zhao<sup>2,‡</sup></li>
+    </ul>
+    <p class="affils">
+      <b>1</b> KAIST <span class="sep">·</span> <b>2</b> Netflix
+      <span class="sep">·</span> † work done during an internship at Netflix
+      <span class="sep">·</span> ‡ corresponding authors
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://sinkhorn-dmd.github.io/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+        Paper
+      </a>
+      <a class="btn" href="https://sinkhorn-dmd.github.io/">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.35 1.09 2.92.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.56 9.56 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>
+        Code
+      </a>
+      <a class="btn" href="#bibtex">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7h8M8 11h8M8 15h5"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg>
+        BibTeX
+      </a>
+    </div>
+  </section>
+
+  <!-- ================================================================ reel -->
+  <section class="reel" aria-label="Text-to-video samples generated by sDMD">
+    <div class="reel-row"></div>
+    <div class="reel-row secondary"></div>
+  </section>
+
+  <!-- ============================================================== method -->
+  <section class="block" id="method">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Method</h2>
+        <p class="section-sub">
+          Distribution Matching Distillation (DMD) distills a multi-step diffusion model into a few-step generator by
+          minimizing reverse KL. Its gradient follows from a fixed-point iteration of Wasserstein gradient flow with
+          integral KL (IKL), reverse KL averaged over noise levels, as the energy functional. Because IKL guides samples
+          by local density alone, teacher scores can be unreliable in regions of low teacher density, and the
+          mode-seeking behavior of reverse KL can collapse the student onto a subset of the teacher modes. sDMD augments
+          IKL with an optimal transport term, realized with Sinkhorn divergence estimated from finite batches, which
+          guides outlier samples toward the target and promotes mode coverage. Since errors in the estimated Sinkhorn
+          velocity can perturb in-domain samples for which IKL is already accurate, sDMD activates the Sinkhorn
+          correction adaptively from discriminator outputs, focusing on outliers where IKL may be unreliable.
+        </p>
+      </div>
+
+      <div class="panels" id="panels">
+        <figure class="panel ikl">
+          <img src="media/img/motivation/panel_a.jpg" alt="IKL velocity field with aligned student particles converging onto the target modes" loading="lazy">
+          <figcaption><p class="ptitle"><span class="key">a</span><span>IKL · aligned samples</span></p><p>When the student already overlaps the teacher, the score difference carries particles onto the target.</p></figcaption>
+        </figure>
+        <figure class="panel ikl">
+          <img src="media/img/motivation/panel_b.jpg" alt="IKL velocity field failing to guide outlier particles toward the target" loading="lazy">
+          <figcaption><p class="ptitle"><span class="key">b</span><span>IKL · outliers</span></p><p>Learned scores (dashed) are unreliable far from the teacher's support.</p></figcaption>
+        </figure>
+        <figure class="panel ikl">
+          <img src="media/img/motivation/panel_c.jpg" alt="IKL velocity field under strong noise collapsing particles onto a single mode" loading="lazy">
+          <figcaption><p class="ptitle"><span class="key">c</span><span>IKL · mode seeking</span></p><p>Reverse KL is mode seeking and collapses particles onto a subset of modes.</p></figcaption>
+        </figure>
+        <figure class="panel ot">
+          <img src="media/img/motivation/panel_d.jpg" alt="Sinkhorn velocity field guiding particles toward target modes through the transport plan" loading="lazy">
+          <figcaption><p class="ptitle"><span class="key">d</span><span>Sinkhorn transport</span></p><p>The transport plan guides outliers (blue). Finite-batch noise can perturb well-placed samples (red), so the scheduler applies transport only where teacher support is weak.</p></figcaption>
+        </figure>
+      </div>
+
+      <div class="diagram-wrap" role="img" aria-label="sDMD training step: noise goes through the few-step generator; the sample is noised and scored by the teacher and the online student score to give the IKL velocity; the same sample and a batch of teacher samples go through a Sinkhorn plan to give the transport velocity, which the discriminator gate switches on; the two velocities are summed and the generator regresses its output onto the stopped-gradient target.">
+        <svg viewBox="0 0 1190 420" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="var(--line-2)"/>
+            </marker>
+            <marker id="arr-ikl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="var(--ikl-2)"/>
+            </marker>
+            <marker id="arr-ot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10z" fill="var(--ot-2)"/>
+            </marker>
+          </defs>
+
+          <!-- noise and generator -->
+          <circle cx="40" cy="210" r="17" class="node"/>
+          <text x="40" y="214.5" text-anchor="middle" class="label">z</text>
+          <text x="40" y="246" text-anchor="middle" class="label small">noise</text>
+          <path d="M57 210H90" class="wire" marker-end="url(#arr)"/>
+          <rect x="92" y="180" width="170" height="60" rx="10" class="node gen"/>
+          <text x="177" y="205" text-anchor="middle" class="label">few-step generator</text>
+          <text x="177" y="226" text-anchor="middle" class="label small">x = f<tspan baseline-shift="sub" font-size="9">θ</tspan>(z)</text>
+          <path d="M262 210H300" class="wire"/>
+
+          <!-- branches out of x -->
+          <path d="M300 210V110H338" class="wire" marker-end="url(#arr)"/>
+          <path d="M300 210H450" class="wire" marker-end="url(#arr)"/>
+          <path d="M300 210V318H450" class="wire" marker-end="url(#arr)"/>
+          <circle cx="300" cy="210" r="4.5" fill="var(--ink)"/>
+          <text x="310" y="200" class="label">x</text>
+
+          <!-- upper: scores -->
+          <rect x="340" y="92" width="86" height="36" rx="8" class="node"/>
+          <text x="383" y="109" text-anchor="middle" class="label small">+ noise t</text>
+          <text x="383" y="123" text-anchor="middle" class="label">x<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+          <path d="M426 110H440V79H450" class="wire" marker-end="url(#arr)"/>
+          <path d="M426 110H440V135H450" class="wire" marker-end="url(#arr)"/>
+          <rect x="452" y="60" width="190" height="38" rx="8" class="node"/>
+          <text x="547" y="83" text-anchor="middle" class="label">teacher score ∇log p<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+          <rect x="452" y="116" width="190" height="38" rx="8" class="node"/>
+          <text x="547" y="139" text-anchor="middle" class="label">student score ∇log q<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+          <path d="M642 79H664V108H678" class="wire ikl"/>
+          <path d="M642 135H664V108" class="wire ikl"/>
+          <circle cx="690" cy="108" r="11" class="node ikl"/>
+          <text x="690" y="113" text-anchor="middle" class="label ikl">−</text>
+          <path d="M701 108H726" class="wire ikl" marker-end="url(#arr-ikl)"/>
+          <rect x="728" y="84" width="190" height="48" rx="9" class="node ikl"/>
+          <text x="823" y="104" text-anchor="middle" class="label ikl">V<tspan baseline-shift="sub" font-size="9">IKL</tspan></text>
+          <text x="823" y="121" text-anchor="middle" class="label small">local score guidance</text>
+
+          <!-- middle: discriminator and gate -->
+          <rect x="452" y="191" width="190" height="38" rx="8" class="node"/>
+          <text x="547" y="214" text-anchor="middle" class="label">discriminator D<tspan baseline-shift="sub" font-size="9">φ</tspan>(x<tspan baseline-shift="sub" font-size="9">t</tspan>, t)</text>
+          <path d="M642 210H726" class="wire dashed" marker-end="url(#arr)"/>
+          <rect x="728" y="191" width="190" height="38" rx="19" class="node"/>
+          <text x="823" y="214" text-anchor="middle" class="label">gate: λ<tspan baseline-shift="sub" font-size="9">φ</tspan>(x<tspan baseline-shift="sub" font-size="9">t</tspan>, t) &gt; λ ?</text>
+          <path d="M918 210H944V300" class="wire dashed" marker-end="url(#arr)"/>
+
+          <!-- lower: transport -->
+          <rect x="340" y="334" width="86" height="40" rx="8" class="node"/>
+          <text x="383" y="351" text-anchor="middle" class="label small">teacher batch</text>
+          <text x="383" y="366" text-anchor="middle" class="label">{ y<tspan baseline-shift="sub" font-size="9">j</tspan> }</text>
+          <path d="M426 354H450" class="wire" marker-end="url(#arr)"/>
+          <rect x="452" y="272" width="190" height="98" rx="8" class="node ot"/>
+          <text x="547" y="300" text-anchor="middle" class="label ot">Sinkhorn plan Π</text>
+          <text x="547" y="320" text-anchor="middle" class="label small">entropic OT, L iterations</text>
+          <text x="547" y="338" text-anchor="middle" class="label small">student batch { x<tspan baseline-shift="sub" font-size="8">i</tspan> }</text>
+          <text x="547" y="356" text-anchor="middle" class="label small">↔ teacher batch { y<tspan baseline-shift="sub" font-size="8">j</tspan> }</text>
+          <path d="M642 321H726" class="wire ot" marker-end="url(#arr-ot)"/>
+          <rect x="728" y="297" width="190" height="48" rx="9" class="node ot"/>
+          <text x="823" y="317" text-anchor="middle" class="label ot" font-size="11.5">V<tspan baseline-shift="sub" font-size="8.5">S</tspan> = T<tspan baseline-shift="sub" font-size="8">q,p</tspan>(x) − T<tspan baseline-shift="sub" font-size="8">q,q</tspan>(x)</text>
+          <text x="823" y="334" text-anchor="middle" class="label small">global transport guidance</text>
+
+          <!-- switch on the transport path -->
+          <path d="M918 321H940" class="wire ot"/>
+          <circle cx="944" cy="321" r="3" fill="var(--ot-2)"/>
+          <path d="M944 321L968 306" class="wire ot"/>
+          <circle cx="972" cy="321" r="3" fill="var(--ot-2)"/>
+          <text x="958" y="346" text-anchor="middle" class="label small">w · 1[gate]</text>
+          <path d="M972 321H1004V228" class="wire ot" marker-end="url(#arr-ot)"/>
+
+          <!-- sum and regression target -->
+          <path d="M918 108H1004V192" class="wire ikl" marker-end="url(#arr-ikl)"/>
+          <circle cx="1004" cy="210" r="16" class="node"/>
+          <text x="1004" y="215" text-anchor="middle" class="label">+</text>
+          <path d="M1020 210H1038" class="wire" marker-end="url(#arr)"/>
+          <rect x="1040" y="176" width="140" height="68" rx="10" class="node gen"/>
+          <text x="1110" y="199" text-anchor="middle" class="label small">regress x onto</text>
+          <text x="1110" y="216" text-anchor="middle" class="label">sg( x + V<tspan baseline-shift="sub" font-size="9">sDMD</tspan> )</text>
+          <text x="1110" y="233" text-anchor="middle" class="label small">+ adversarial loss</text>
+        </svg>
+      </div>
+      <p class="scroll-hint">Scroll the diagram sideways.</p>
+
+      <h3 class="sub-title" style="margin-top: clamp(32px, 4vw, 48px)">Training objective</h3>
+      <p class="section-sub">
+        Each generator sample \(x = f_\theta(z)\) is regressed onto the stop-gradient target
+        \(x + V_{\mathrm{sDMD}}(x)\). The velocity has two parts. The <span class="tag ikl">IKL velocity</span>
+        is the teacher-minus-student score difference averaged over noise levels, which is the DMD update.
+        The <span class="tag ot">Sinkhorn velocity</span> is the difference between where the entropic transport
+        plan sends \(x\) among the teacher samples and among its own batch. Finite-batch Sinkhorn is noisy: its velocity is estimated from a finite batch of samples
+        per prompt, and that estimation error can perturb in-domain samples for which IKL is already accurate. The goal is
+        therefore to apply the Sinkhorn correction selectively, only to outliers where the teacher score is likely
+        unreliable. To identify them, we rely on the discriminator \(D_\phi\) that DMD2 already trains for its
+        adversarial loss, which separates noised teacher samples from noised student samples. We take
+        \(\lambda_\phi = 1 - D_\phi(x_t,t)\) as a proxy for weak teacher support. If \(\lambda_\phi\) exceeds a
+        threshold \(\lambda\), the Sinkhorn velocity is added; otherwise only the IKL velocity is used.
+      </p>
+      <div class="eqcard">
+        <p class="eq">\[ \textcolor{#f0917f}{V_{\mathrm{IKL}}(x)} = \mathbb{E}_{t,\epsilon}\Big[\alpha_t\big(\nabla\log p_t(x_t) - \nabla\log q_t(x_t)\big)\Big],
+          \qquad \textcolor{#7bd79a}{V_{S_\beta}(x)} = T_{q,p}(x) - T_{q,q}(x) \]</p>
+        <p class="eq">\[ V_{\mathrm{sDMD}}(x) = \textcolor{#f0917f}{V_{\mathrm{IKL}}(x)} + w\,\mathbf{1}\!\left[\lambda_\phi(x_t,t) > \lambda\right]\textcolor{#7bd79a}{V_{S_\beta}(x)},
+          \qquad \lambda_\phi(x_t,t) = 1 - D_\phi(x_t,t) \]</p>
+        <p class="eq">\[ \mathcal{L}_{\mathrm{sDMD}}(\theta,\phi) = \mathbb{E}_{z}\,\Big\| f_\theta(z) - \mathrm{sg}\big(f_\theta(z) + V_{\mathrm{sDMD}}(f_\theta(z))\big)\Big\|^2 + \mathcal{L}_{\mathrm{adv}}(\phi,\theta) \]</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== images -->
+  <section class="block" id="images">
+    <div class="container wide">
+      <div class="section-head">
+        <h2 class="section-title">Text-to-Image (FLUX.1-dev, Qwen-Image)</h2>
+      </div>
+      <div class="wall" id="wall" aria-label="Four-step sDMD samples"></div>
+    </div>
+
+  </section>
+
+  <!-- ============================================================== videos -->
+  <section class="block" id="videos">
+    <div class="container wide">
+      <div class="section-head">
+        <h2 class="section-title">Text-to-Video (Wan2.1-14B)</h2>
+      </div>
+
+      <div class="viewer" id="viewer-qualitative" aria-label="Video comparison"></div>
+    </div>
+  </section>
+
+  <!-- =========================================================== diversity -->
+  <section class="block" id="diversity">
+    <div class="container wide">
+      <div class="section-head">
+        <h2 class="section-title">Diversity</h2>
+      </div>
+
+      <h3 class="sub-title">Text-to-Image (FLUX.1-dev, Qwen-Image)</h3>
+      <div class="explorer" data-tabs>
+        <div class="explorer-head">
+          <div class="tabs" role="tablist" aria-label="Model" style="margin: 0">
+            <button class="tab" role="tab" aria-selected="true" aria-controls="explorer-flux" id="tabbtn-explorer-flux" type="button">FLUX.1-dev · 4 steps</button>
+            <button class="tab" role="tab" aria-selected="false" aria-controls="explorer-qwen" id="tabbtn-explorer-qwen" type="button">Qwen-Image · 4 steps</button>
+          </div>
+        </div>
+        <div class="tabpanel" id="explorer-flux" role="tabpanel" aria-labelledby="tabbtn-explorer-flux"></div>
+        <div class="tabpanel" id="explorer-qwen" role="tabpanel" aria-labelledby="tabbtn-explorer-qwen" hidden></div>
+      </div>
+
+      <h3 class="sub-title" style="margin-top: clamp(32px, 4vw, 48px)">Text-to-Video (Wan2.1-14B)</h3>
+      <div class="viewer" id="viewer-diversity" aria-label="Video diversity comparison"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================== bibtex -->
+  <section class="block" id="bibtex">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">BibTeX</h2>
+      </div>
+      <div class="bib">
+        <button class="pill copy" type="button" data-copy="#bibtex-text">Copy</button>
+<pre id="bibtex-text">@article{kim2026sinkhorn,
+  title   = {sDMD: Sinkhorn Distribution Matching Distillation},
+  author  = {Kim, Jaihoon and Li, Lingxiao and Shimada, Soshi and Cooper, Roshni and Sung, Minhyuk and Zhao, Yiwei},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged media" hidden>
+  <button class="close" type="button" aria-label="Close">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div class="lightbox-body"></div>
+</div>
+</body>
+</html>
